@@ -21,7 +21,7 @@ import AnieRobot.modules.sql.connection_sql as con_sql
 def keyboard(update, context):
     user = update.effective_user  # type: Optional[User]
     conn_id = con_sql.get_connected_chat(user.id)
-    if conn_id and not conn_id == False:
+    if conn_id and conn_id != False:
         btn1 = "/disconnect - Disconnect from chat"
         btn2 = ""
         btn3 = ""

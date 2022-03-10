@@ -72,13 +72,9 @@ def get_fed_info(fed_id):
 
 
 def get_fed_id(chat_id):
-        curr = SESSION.query(ChatF).get(str(chat_id))
-        if curr:
-                h = curr.fed_id
-        else:
-                h = False
-        SESSION.close()
-        return h
+    h = curr.fed_id if (curr := SESSION.query(ChatF).get(str(chat_id))) else False
+    SESSION.close()
+    return h
 
 
 def new_fed(owner_id, fed_id, fed_name):
@@ -113,10 +109,9 @@ def del_fed(fed_id, chat_id):
                         SESSION.delete(I)
                         SESSION.commit()
 
-        curr = SESSION.query(RulesF).get(fed_id)
-        if curr:
-                SESSION.delete(curr)
-                SESSION.commit()
+        if curr := SESSION.query(RulesF).get(fed_id):
+            SESSION.delete(curr)
+            SESSION.commit()
 
         return
 
@@ -300,44 +295,33 @@ def un_fban_user(fed_id, user_id):
             SESSION.commit()
 
 def get_fban_user(fed_id, user_id):
-        r = SESSION.query(BansF).all()
-        h = False
-        for I in r:
-                if I.fed_id == fed_id:
-                        if int(I.user_id) == int(user_id):
-                                h = I.reason
+    r = SESSION.query(BansF).all()
+    h = False
+    for I in r:
+        if I.fed_id == fed_id and int(I.user_id) == int(user_id):
+            h = I.reason
 
-        SESSION.close()
-        return h
+    SESSION.close()
+    return h
 
 
 def get_all_fban_users(fed_id):
-        r = SESSION.query(BansF).all()
-        h = []
-        for I in r:
-                if I.fed_id == fed_id:
-                        h.append(I.user_id)
-
-        SESSION.close()
-        return h
+    r = SESSION.query(BansF).all()
+    h = [I.user_id for I in r if I.fed_id == fed_id]
+    SESSION.close()
+    return h
 
 def get_all_fban_users_global():
-        r = SESSION.query(BansF).all()
-        h = []
-        for I in r:
-                h.append(I.user_id)
-
-        SESSION.close()
-        return h
+    r = SESSION.query(BansF).all()
+    h = [I.user_id for I in r]
+    SESSION.close()
+    return h
 
 def get_all_feds_users_global():
-        r = SESSION.query(Federations).all()
-        h = []
-        for I in r:
-                h.append(I.fed_id)
-
-        SESSION.close()
-        return h
+    r = SESSION.query(Federations).all()
+    h = [I.fed_id for I in r]
+    SESSION.close()
+    return h
 
 def search_fed_by_id(fed_id):
         curr = SESSION.query(Federations).all()

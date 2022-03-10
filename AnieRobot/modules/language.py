@@ -32,14 +32,12 @@ def locale(bot, update, args):
                 update.message.reply_text("{} is not supported yet!".format(list_locales[locale]))
         else:
             update.message.reply_text("Is that even a valid language code? Use an internationally accepted ISO code!")
+    elif LANGUAGE := prev_locale(chat.id):
+        locale = LANGUAGE.locale_name
+        native_lang = list_locales[locale]
+        update.message.reply_text("Current locale for this chat is: *{}*".format(native_lang), parse_mode = ParseMode.MARKDOWN)
     else:
-        LANGUAGE = prev_locale(chat.id)
-        if LANGUAGE:
-            locale = LANGUAGE.locale_name
-            native_lang = list_locales[locale]
-            update.message.reply_text("Current locale for this chat is: *{}*".format(native_lang), parse_mode = ParseMode.MARKDOWN)
-        else:
-            update.message.reply_text("Current locale for this chat is: *English*", parse_mode=ParseMode.MARKDOWN)
+        update.message.reply_text("Current locale for this chat is: *English*", parse_mode=ParseMode.MARKDOWN)
 
 @user_admin
 def locale_button(update, context):
@@ -66,7 +64,7 @@ def locale_button(update, context):
 
     conn = connected(context.bot, update, chat, user.id, need_admin=False)
 
-    if not conn == False:
+    if conn != False:
         try:
             chatlng = prev_locale(conn).locale_name
             chatlng = list_locales[chatlng]

@@ -55,11 +55,14 @@ async def purge(event):
         del_res = await event.client.send_message(
             event.chat_id, f"Purged {count} messages."
         )
-       
+
 
     except MessageDeleteForbiddenError:
-        text = "Failed to delete messages.\n"
-        text += "Messages maybe too old or I'm not admin! or dont have delete rights!"
+        text = (
+            "Failed to delete messages.\n"
+            + "Messages maybe too old or I'm not admin! or dont have delete rights!"
+        )
+
         del_res = await event.respond(text, parse_mode="md")
         
 
@@ -99,8 +102,11 @@ async def purge(event):
         await del_res.delete()
 
     except MessageDeleteForbiddenError:
-        text = "Failed to delete messages.\n"
-        text += "Messages maybe too old or I'm not admin! or dont have delete rights!"
+        text = (
+            "Failed to delete messages.\n"
+            + "Messages maybe too old or I'm not admin! or dont have delete rights!"
+        )
+
         del_res = await event.respond(text, parse_mode="md")
         await asyncio.sleep(2)
         await del_res.delete()

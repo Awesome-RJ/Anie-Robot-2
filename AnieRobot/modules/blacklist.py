@@ -33,18 +33,17 @@ def blacklist(update, context):
     chat = update.effective_chat  # type: Optional[Chat]
     user = update.effective_user  # type: Optional[User]
     bot = context.bot
-    
+
     conn = connected(bot, update, chat, user.id, need_admin=False)
-    if not conn == False:
+    if conn != False:
         chat_id = conn
         chat_name = dispatcher.bot.getChat(conn).title
+    elif chat.type == "private":
+        exit(1)
     else:
-        if chat.type == "private":
-            exit(1)
-        else:
-            chat_id = update.effective_chat.id
-            chat_name = chat.title
-    
+        chat_id = update.effective_chat.id
+        chat_name = chat.title
+
     filter_list = tld(chat.id, "<b>Current blacklisted words in {}:</b>\n").format(chat_name)
 
     all_blacklisted = sql.get_chat_blacklist(chat_id)
@@ -75,7 +74,7 @@ def add_blacklist(update, context):
     words = msg.text.split(None, 1)
 
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chat_id = conn
         chat_name = dispatcher.bot.getChat(conn).title
     else:
@@ -87,7 +86,14 @@ def add_blacklist(update, context):
 
     if len(words) > 1:
         text = words[1]
-        to_blacklist = list(set(trigger.strip() for trigger in text.split("\n") if trigger.strip()))
+        to_blacklist = list(
+            {
+                trigger.strip()
+                for trigger in text.split("\n")
+                if trigger.strip()
+            }
+        )
+
         for trigger in to_blacklist:
             sql.add_to_blacklist(chat_id, trigger.lower())
 
@@ -114,7 +120,7 @@ def unblacklist(update, context):
     words = msg.text.split(None, 1)
 
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chat_id = conn
         chat_name = dispatcher.bot.getChat(conn).title
     else:
@@ -126,7 +132,14 @@ def unblacklist(update, context):
 
     if len(words) > 1:
         text = words[1]
-        to_unblacklist = list(set(trigger.strip() for trigger in text.split("\n") if trigger.strip()))
+        to_unblacklist = list(
+            {
+                trigger.strip()
+                for trigger in text.split("\n")
+                if trigger.strip()
+            }
+        )
+
         successful = 0
         for trigger in to_unblacklist:
             success = sql.rm_from_blacklist(chat_id, trigger.lower())
@@ -170,14 +183,12 @@ def del_blacklist(update, context):
 
     chat_filters = sql.get_chat_blacklist(chat.id)
     for trigger in chat_filters:
-        pattern = r"( |^|[^\w])" + re.escape(trigger) + r"( |$|[^\w])"
+        pattern = f"( |^|[^\\w]){re.escape(trigger)}( |$|[^\\w])"
         if re.search(pattern, to_match, flags=re.IGNORECASE):
             try:
                 message.delete()
             except BadRequest as excp:
-                if excp.message == "Message to delete not found":
-                    pass
-                else:
+                if excp.message != "Message to delete not found":
                     LOGGER.exception("Error while deleting blacklist message.")
             break
 

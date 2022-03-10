@@ -76,8 +76,7 @@ def update_gmute_reason(user_id, name, reason=None):
 
 def ungmute_user(user_id):
     with GMUTED_USERS_LOCK:
-        user = SESSION.query(GloballyMutedUsers).get(user_id)
-        if user:
+        if user := SESSION.query(GloballyMutedUsers).get(user_id):
             SESSION.delete(user)
 
         SESSION.commit()
@@ -153,8 +152,7 @@ def __load_gmute_stat_list():
 
 def migrate_chat(old_chat_id, new_chat_id):
     with GMUTE_SETTING_LOCK:
-        chat = SESSION.query(GmuteSettings).get(str(old_chat_id))
-        if chat:
+        if chat := SESSION.query(GmuteSettings).get(str(old_chat_id)):
             chat.chat_id = new_chat_id
             SESSION.add(chat)
 

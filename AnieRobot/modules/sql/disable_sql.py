@@ -59,12 +59,10 @@ def disable_command(chat_id, disable):
 
 def enable_command(chat_id, enable):
     with DISABLE_INSERTION_LOCK:
-        disabled = SESSION.query(Disable).get((str(chat_id), enable))
-
-        if disabled:
+        if disabled := SESSION.query(Disable).get((str(chat_id), enable)):
             if enable in DISABLED.get(str(chat_id)):  # sanity check
                 DISABLED.setdefault(str(chat_id), set()).remove(enable)
-                
+
             SESSION.delete(disabled)
             SESSION.commit()
             return True
@@ -83,9 +81,8 @@ def disabledel_set(chat_id, is_enable):
         if is_enable:
             if str(chat_id) not in DISABLEDEL:
                 DISABLEDEL.append(str(chat_id))
-        else:
-            if str(chat_id) in DISABLEDEL:
-                DISABLEDEL.remove(str(chat_id))
+        elif str(chat_id) in DISABLEDEL:
+            DISABLEDEL.remove(str(chat_id))
 
         SESSION.add(curr)
         SESSION.commit()

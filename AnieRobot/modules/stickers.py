@@ -60,8 +60,7 @@ def kang(update, context):
     packname = f"c{user.id}_by_{bot.username}"
     kangsticker = "kangsticker.png"
 
-    reply = msg.reply_to_message
-    if reply:
+    if reply := msg.reply_to_message:
         if reply.sticker:
             file_id = reply.sticker.file_id
         elif reply.photo:
@@ -79,7 +78,7 @@ def kang(update, context):
             sticker_emoji = reply.sticker.emoji
         else:
             sticker_emoji = "🤔"
-    elif args and not reply:
+    elif args:
         urlemoji = msg.text.split(" ")
         if len(urlemoji) == 3:                
             png_sticker = urlemoji[1]
@@ -139,12 +138,12 @@ def makepack_internal(msg, user, png_sticker, emoji, bot):
                                              emojis=emoji)
     except TelegramError as e:
         print(e)
-        if e.message == "Sticker set name is already occupied":
-            msg.reply_text("Your pack can be found [here](t.me/addstickers/%s)" % packname,
-                           parse_mode=ParseMode.MARKDOWN)
-        elif e.message == "Peer_id_invalid":
+        if e.message == "Peer_id_invalid":
             msg.reply_text("I need you to PM to me first to able to gain your basic information.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(
                 text="PM the bot", url=f"t.me/{bot.username}")]]))
+        elif e.message == "Sticker set name is already occupied":
+            msg.reply_text("Your pack can be found [here](t.me/addstickers/%s)" % packname,
+                           parse_mode=ParseMode.MARKDOWN)
         return
 
     if success:
@@ -155,7 +154,6 @@ def makepack_internal(msg, user, png_sticker, emoji, bot):
 
 def imresize(kangsticker):
     im = Image.open(kangsticker)
-    maxsize = (512, 512)
     if (im.width and im.height) < 512:
         size1 = im.width
         size2 = im.height
@@ -172,6 +170,7 @@ def imresize(kangsticker):
         sizenew = (size1new, size2new)
         im = im.resize(sizenew)
     else:
+        maxsize = (512, 512)
         im.thumbnail(maxsize)
     return im
 

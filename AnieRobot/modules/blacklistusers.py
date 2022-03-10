@@ -32,8 +32,7 @@ def bl_users(update, context):
         name = bot.get_chat(x)
         name = name.first_name.replace("<", "&lt;")
         name = name.replace(">", "&gt;")
-        reason = sql.get_reason(x)
-        if reason:
+        if reason := sql.get_reason(x):
             rep += f"• <a href='tg://user?id={x}'>{name}</a> :- {reason}\n"
         else:
             rep += f"• <a href='tg://user?id={x}'>{name}</a>\n"
@@ -45,10 +44,7 @@ def unbl_user(update, context):
     msg = update.effective_message.reply_to_message
     bot = context.bot
     args = context.args
-    if msg:
-        user_id = str(msg.from_user.id)
-    else:
-        user_id = args[0]
+    user_id = str(msg.from_user.id) if msg else args[0]
     if sql.is_user_blacklisted(int(user_id)):
         sql.unblacklist_user(user_id)
         rep.reply_text("User removed from blacklist!")
@@ -58,12 +54,11 @@ def unbl_user(update, context):
         
 def __user_info__(user_id):
     is_blacklisted = sql.is_user_blacklisted(user_id)
-    
+
     text = "Blacklisted: <b>{}</b>"
     if is_blacklisted:
         text = text.format("Yes")
-        reason = sql.get_reason(user_id)
-        if reason:
+        if reason := sql.get_reason(user_id):
             text += f"\nReason: <code>{reason}</code>"
     else:
         text = text.format("No")

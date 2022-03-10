@@ -62,7 +62,7 @@ def get_readable_time(seconds: int) -> str:
     for x in range(len(time_list)):
         time_list[x] = str(time_list[x]) + time_suffix_list[x]
     if len(time_list) == 4:
-        ping_time += time_list.pop() + ", "
+        ping_time += f'{time_list.pop()}, '
 
     time_list.reverse()
     ping_time += ":".join(time_list)
@@ -405,39 +405,43 @@ def innexia_about_callback(update, context):
                  ],
                  [
                     InlineKeyboardButton(text="Back", callback_data="anie_back"),
-                 
+
                  ]
                 ]
             ),
         )
     elif query.data == "Anie_admin":
         query.message.edit_text(
-            text=f"*Let's make your group bit effective now*"
-            f"\nCongragulations, Innexia now ready to manage your group."
-            f"\n\n*Admin Tools*"
-            f"\nBasic Admin tools help you to protect and powerup your group."
-            f"\nYou can ban members, Kick members, Promote someone as admin through commands of bot."
-            f"\n\n*Welcome*"
-            f"\nLets set a welcome message to welcome new users coming to your group."
-            f"send `/setwelcome [message]` to set a welcome message!",
+            text="*Let's make your group bit effective now*",
             parse_mode=ParseMode.MARKDOWN,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton(text="Back", callback_data="anie_basichelp")]]
+                [
+                    [
+                        InlineKeyboardButton(
+                            text="Back", callback_data="anie_basichelp"
+                        )
+                    ]
+                ]
             ),
         )
 
+
     elif query.data == "anie_notes":
         query.message.edit_text(
-            text=f"<b> Setting up notes</b>"
-            f"\nYou can save message/media/audio or anything as notes"
-            f"\nto get a note simply use # at the beginning of a word"
-            f"\n\nYou can also set buttons for notes and filters (refer help menu)",
+            text="<b> Setting up notes</b>",
             parse_mode=ParseMode.HTML,
             reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton(text="Back", callback_data="anie_basichelp")]]
+                [
+                    [
+                        InlineKeyboardButton(
+                            text="Back", callback_data="anie_basichelp"
+                        )
+                    ]
+                ]
             ),
         )
+
     elif query.data == "anie_support":
         query.message.edit_text(
             text="* Anie support chats*"
@@ -455,30 +459,34 @@ def innexia_about_callback(update, context):
                  ],
                  [
                     InlineKeyboardButton(text="Back", callback_data="anie_basichelp"),
-                 
+
                  ]
                 ]
             ),
         )
     elif query.data == "anie_credit":
         query.message.edit_text(
-            text=f"<b> CREDIT FOR Anie DEV'S</b>\n"
-            f"\nHere Some Developers Helping in Making The Aniw Bot",
+            text="<b> CREDIT FOR Anie DEV'S</b>\\n",
             parse_mode=ParseMode.HTML,
             reply_markup=InlineKeyboardMarkup(
                 [
-                 [
-                    InlineKeyboardButton(text="D3nvil", url="t.me/d3nvil"),
-                    InlineKeyboardButton(text="Anon", url="t.me/noobanon"),
-                 ],
-                 [
-                    InlineKeyboardButton(text="loly", url="t.me/piroXpower"),
-                    InlineKeyboardButton(text="Zᴀʟɪᴍ", url="https://t.me/Jalim_Munda"),
-                 ],
-                 [
-                    InlineKeyboardButton(text="Back", callback_data="anie_basichelp"),
-                 
-                 ]
+                    [
+                        InlineKeyboardButton(text="D3nvil", url="t.me/d3nvil"),
+                        InlineKeyboardButton(text="Anon", url="t.me/noobanon"),
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="loly", url="t.me/piroXpower"
+                        ),
+                        InlineKeyboardButton(
+                            text="Zᴀʟɪᴍ", url="https://t.me/Jalim_Munda"
+                        ),
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="Back", callback_data="anie_basichelp"
+                        ),
+                    ],
                 ]
             ),
         )
@@ -596,25 +604,24 @@ def send_settings(chat_id, user_id, user=False):
                 parse_mode=ParseMode.MARKDOWN,
             )
 
+    elif CHAT_SETTINGS:
+        chat_name = dispatcher.bot.getChat(chat_id).title
+        dispatcher.bot.send_message(
+            user_id,
+            text="Which module would you like to check {}'s settings for?".format(
+                chat_name
+            ),
+            reply_markup=InlineKeyboardMarkup(
+                paginate_modules(0, CHAT_SETTINGS, "stngs", chat=chat_id)
+            ),
+        )
     else:
-        if CHAT_SETTINGS:
-            chat_name = dispatcher.bot.getChat(chat_id).title
-            dispatcher.bot.send_message(
-                user_id,
-                text="Which module would you like to check {}'s settings for?".format(
-                    chat_name
-                ),
-                reply_markup=InlineKeyboardMarkup(
-                    paginate_modules(0, CHAT_SETTINGS, "stngs", chat=chat_id)
-                ),
-            )
-        else:
-            dispatcher.bot.send_message(
-                user_id,
-                "Seems like there aren't any chat settings available :'(\nSend this "
-                "in a group chat you're admin in to find its current settings!",
-                parse_mode=ParseMode.MARKDOWN,
-            )
+        dispatcher.bot.send_message(
+            user_id,
+            "Seems like there aren't any chat settings available :'(\nSend this "
+            "in a group chat you're admin in to find its current settings!",
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
 
 @run_async
@@ -708,29 +715,28 @@ def get_settings(update: Update, context: CallbackContext):
     msg = update.effective_message  # type: Optional[Message]
 
     # ONLY send settings in PM
-    if chat.type != chat.PRIVATE:
-        if is_user_admin(chat, user.id):
-            text = "Click here to get this chat's settings, as well as yours."
-            msg.reply_text(
-                text,
-                reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                text="Settings",
-                                url="t.me/{}?start=stngs_{}".format(
-                                    context.bot.username, chat.id
-                                ),
-                            )
-                        ]
-                    ]
-                ),
-            )
-        else:
-            text = "Click here to check your settings."
-
-    else:
+    if chat.type == chat.PRIVATE:
         send_settings(chat.id, user.id, True)
+
+    elif is_user_admin(chat, user.id):
+        text = "Click here to get this chat's settings, as well as yours."
+        msg.reply_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            text="Settings",
+                            url="t.me/{}?start=stngs_{}".format(
+                                context.bot.username, chat.id
+                            ),
+                        )
+                    ]
+                ]
+            ),
+        )
+    else:
+        text = "Click here to check your settings."
 
 
 @run_async
@@ -840,15 +846,15 @@ def main():
         LOGGER.info("Using long polling.")
         updater.start_polling(timeout=15, read_latency=4, clean=True)
 
-    if len(argv) not in (1, 3, 4):
-        telethn.disconnect()
-    else:
+    if len(argv) in {1, 3, 4}:
         telethn.run_until_disconnected()
 
+    else:
+        telethn.disconnect()
     updater.idle()
 
 
 if __name__ == "__main__":
-    LOGGER.info("Successfully loaded modules: " + str(ALL_MODULES))
+    LOGGER.info(f"Successfully loaded modules: {str(ALL_MODULES)}")
     telethn.start(bot_token=TOKEN)
     main()

@@ -17,10 +17,7 @@ try:
 except:
     CUSTOM_CMD = False
 
-if CUSTOM_CMD:
-    CMD_STARTERS = CUSTOM_CMD
-else:
-    CMD_STARTERS = ('!', '/')
+CMD_STARTERS = CUSTOM_CMD or ('!', '/')
 
 
 class CustomCommandHandler(tg.CommandHandler):
@@ -30,33 +27,33 @@ class CustomCommandHandler(tg.CommandHandler):
         super().__init__(command, callback, **kwargs)
 
     def check_update(self, update):
-        if isinstance(update, Update) and update.effective_message:
-            message = update.effective_message
-            
-            try: 
-               user_id = update.effective_user.id
-            except:
-               user_id = None 
-            if user_id:
-                if is_user_gbanned(user_id):
-                      return
-            if user_id:
-                if sql.is_user_blacklisted(update.effective_user.id):
-                      return False
+        if not isinstance(update, Update) or not update.effective_message:
+            return
+        message = update.effective_message
 
-            if message.text and len(message.text) > 1:
-                fst_word = message.text.split(None, 1)[0]
-                if len(fst_word) > 1 and any(fst_word.startswith(start) for start in ('/', '!')):
-                    args = message.text.split()[1:]
-                    command = fst_word[1:].split('@')
-                    command.append(message.bot.username)  # in case the command was sent without a username
+        try: 
+           user_id = update.effective_user.id
+        except:
+           user_id = None
+        if user_id and is_user_gbanned(user_id):
+            return
+        if user_id and sql.is_user_blacklisted(update.effective_user.id):
+            return False
 
-                    if not (command[0].lower() in self.command
-                            and command[1].lower() == message.bot.username.lower()):
-                        return None
+        if message.text and len(message.text) > 1:
+            fst_word = message.text.split(None, 1)[0]
+            if len(fst_word) > 1 and any(fst_word.startswith(start) for start in ('/', '!')):
+                args = message.text.split()[1:]
+                command = fst_word[1:].split('@')
+                command.append(message.bot.username)  # in case the command was sent without a username
 
-                    filter_result = self.filters(update)
-                    if filter_result:
-                        return args, filter_result
-                    else:
-                        return False
+                if (
+                    command[0].lower() not in self.command
+                    or command[1].lower() != message.bot.username.lower()
+                ):
+                    return None
+
+                if filter_result := self.filters(update):
+                    return args, filter_result
+                else:
+                    return False

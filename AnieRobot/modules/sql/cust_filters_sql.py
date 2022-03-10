@@ -121,8 +121,7 @@ def add_filter(chat_id, keyword, reply, is_sticker=False, is_document=False, is_
 		buttons = []
 
 	with CUST_FILT_LOCK:
-		prev = SESSION.query(CustomFilters).get((str(chat_id), keyword))
-		if prev:
+		if prev := SESSION.query(CustomFilters).get((str(chat_id), keyword)):
 			with BUTTON_LOCK:
 				prev_buttons = SESSION.query(Buttons).filter(Buttons.chat_id == str(chat_id),
 															 Buttons.keyword == keyword).all()
@@ -151,8 +150,7 @@ def new_add_filter(chat_id, keyword, reply_text, file_type, file_id, buttons):
 		buttons = []
 
 	with CUST_FILT_LOCK:
-		prev = SESSION.query(CustomFilters).get((str(chat_id), keyword))
-		if prev:
+		if prev := SESSION.query(CustomFilters).get((str(chat_id), keyword)):
 			with BUTTON_LOCK:
 				prev_buttons = SESSION.query(Buttons).filter(Buttons.chat_id == str(chat_id),
 															 Buttons.keyword == keyword).all()
@@ -176,8 +174,7 @@ def new_add_filter(chat_id, keyword, reply_text, file_type, file_id, buttons):
 def remove_filter(chat_id, keyword):
 	global CHAT_FILTERS
 	with CUST_FILT_LOCK:
-		filt = SESSION.query(CustomFilters).get((str(chat_id), keyword))
-		if filt:
+		if filt := SESSION.query(CustomFilters).get((str(chat_id), keyword)):
 			if keyword in CHAT_FILTERS.get(str(chat_id), []):  # Sanity check
 				CHAT_FILTERS.get(str(chat_id), []).remove(keyword)
 
@@ -283,7 +280,7 @@ def __migrate_filters():
 			if str(x.chat_id) != "-1001385057026":
 				continue
 
-			print(str(x.chat_id), x.keyword, x.reply, file_type.value)
+			print(x.chat_id, x.keyword, x.reply, file_type.value)
 			if file_type == Types.TEXT:
 				filt = CustomFilters(str(x.chat_id), x.keyword, x.reply, file_type.value, None)
 			else:

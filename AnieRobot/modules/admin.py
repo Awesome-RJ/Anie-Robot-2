@@ -113,20 +113,20 @@ async def can_ban_users(message):
 async def get_users(show):
     if not show.is_group:
         return
-    if show.is_group:
-        if not await is_register_admin(show.input_chat, show.sender_id):
-            return
+    if not await is_register_admin(show.input_chat, show.sender_id):
+        return
     info = await bot.get_entity(show.chat_id)
-    title = info.title if info.title else "this chat"
+    title = info.title or "this chat"
     mentions = "Users in {}: \n".format(title)
     async for user in bot.iter_participants(show.chat_id):
-        if not user.deleted:
-            mentions += f"\n[{user.first_name}](tg://user?id={user.id}) {user.id}"
-        else:
-            mentions += f"\nDeleted Account {user.id}"
-    file = open("userslist.txt", "w+")
-    file.write(mentions)
-    file.close()
+        mentions += (
+            f"\nDeleted Account {user.id}"
+            if user.deleted
+            else f"\n[{user.first_name}](tg://user?id={user.id}) {user.id}"
+        )
+
+    with open("userslist.txt", "w+") as file:
+        file.write(mentions)
     await bot.send_file(
         show.chat_id,
         "userslist.txt",
@@ -581,23 +581,20 @@ def fullpromote(update: Update, context: CallbackContext) -> str:
 
 @bot.on(events.NewMessage(pattern="/middemote(?: |$)(.*)"))
 async def middemote(dmod):
-    if dmod.is_group:
-        if not await can_promote_users(message=dmod):
-            return
-    else:
+    if (
+        dmod.is_group
+        and not await can_promote_users(message=dmod)
+        or not dmod.is_group
+    ):
         return
-
     user = await get_user_from_event(dmod)
-    if dmod.is_group:
-        if not await is_register_admin(dmod.input_chat, user.id):
-            await dmod.reply("**Darling, i cant demote non-admin**")
-            return
-    else:
+    if not dmod.is_group:
         return
 
-    if user:
-        pass
-    else:
+    if not await is_register_admin(dmod.input_chat, user.id):
+        await dmod.reply("**Darling, i cant demote non-admin**")
+        return
+    if not user:
         return
 
     # New rights after demotion
@@ -623,23 +620,20 @@ async def middemote(dmod):
     
 @bot.on(events.NewMessage(pattern="/lowdemote(?: |$)(.*)"))
 async def lowdemote(dmod):
-    if dmod.is_group:
-        if not await can_promote_users(message=dmod):
-            return
-    else:
+    if (
+        dmod.is_group
+        and not await can_promote_users(message=dmod)
+        or not dmod.is_group
+    ):
         return
-
     user = await get_user_from_event(dmod)
-    if dmod.is_group:
-        if not await is_register_admin(dmod.input_chat, user.id):
-            await dmod.reply("**Darling, i cant demote non-admin**")
-            return
-    else:
+    if not dmod.is_group:
         return
 
-    if user:
-        pass
-    else:
+    if not await is_register_admin(dmod.input_chat, user.id):
+        await dmod.reply("**Darling, i cant demote non-admin**")
+        return
+    if not user:
         return
 
     # New rights after demotion
@@ -977,9 +971,12 @@ def adminlist(update, context):
             name = "{}".format(
                 mention_html(
                     user.id,
-                    html.escape(user.first_name + " " + (user.last_name or "")),
-                ),
+                    html.escape(
+                        f'{user.first_name} ' + ((user.last_name or ""))
+                    ),
+                )
             )
+
 
         if user.is_bot:
             administrators.remove(admin)
@@ -1010,17 +1007,18 @@ def adminlist(update, context):
             name = "{}".format(
                 mention_html(
                     user.id,
-                    html.escape(user.first_name + " " + (user.last_name or "")),
-                ),
+                    html.escape(
+                        f'{user.first_name} ' + ((user.last_name or ""))
+                    ),
+                )
             )
-        # if user.username:
-        #    name = escape_markdown("@" + user.username)
+
         if status == "administrator":
             if custom_title:
                 try:
                     custom_admin_list[custom_title].append(name)
                 except KeyError:
-                    custom_admin_list.update({custom_title: [name]})
+                    custom_admin_list[custom_title] = [name]
             else:
                 normal_admin_list.append(name)
 

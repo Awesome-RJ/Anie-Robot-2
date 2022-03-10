@@ -41,19 +41,18 @@ def report_setting(update, context):
             msg.reply_text("Your current report preference is: `{}`".format(sql.user_should_report(chat.id)),
                            parse_mode=ParseMode.MARKDOWN)
 
-    else:
-        if len(args) >= 1:
-            if args[0] in ("yes", "on"):
-                sql.set_chat_setting(chat.id, True)
-                msg.reply_text("Turned on reporting! Admins who have turned on reports will be notified when /report "
-                               "or @admin are called.")
+    elif len(args) >= 1:
+        if args[0] in ("yes", "on"):
+            sql.set_chat_setting(chat.id, True)
+            msg.reply_text("Turned on reporting! Admins who have turned on reports will be notified when /report "
+                           "or @admin are called.")
 
-            elif args[0] in ("no", "off"):
-                sql.set_chat_setting(chat.id, False)
-                msg.reply_text("Turned off reporting! No admins will be notified on /report or @admin.")
-        else:
-            msg.reply_text("This chat's current setting is: `{}`".format(sql.chat_should_report(chat.id)),
-                           parse_mode=ParseMode.MARKDOWN)
+        elif args[0] in ("no", "off"):
+            sql.set_chat_setting(chat.id, False)
+            msg.reply_text("Turned off reporting! No admins will be notified on /report or @admin.")
+    else:
+        msg.reply_text("This chat's current setting is: `{}`".format(sql.chat_should_report(chat.id)),
+                       parse_mode=ParseMode.MARKDOWN)
 
 
 @user_not_admin
@@ -69,7 +68,7 @@ def report(update, context) -> str:
         chat_name = chat.title or chat.first or chat.username
         admin_list = chat.get_administrators()
 
-       
+
         #if reported_user.id == user.id:
         #return ""
 
@@ -114,7 +113,7 @@ def report(update, context) -> str:
 
             if sql.user_should_report(admin.user.id):
                 try:
-                    if not chat.type == Chat.SUPERGROUP:
+                    if chat.type != Chat.SUPERGROUP:
                         bot.send_message(admin.user.id, msg + link, parse_mode=ParseMode.HTML)
 
                         if should_forward:

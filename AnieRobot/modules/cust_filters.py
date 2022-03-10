@@ -50,9 +50,9 @@ ENUM_FUNC_MAP = {
 def list_handlers(update, context):
 	chat = update.effective_chat  # type: Optional[Chat]
 	user = update.effective_user  # type: Optional[User]
-	
+
 	conn = connected(context.bot, update, chat, user.id, need_admin=False)
-	if not conn == False:
+	if conn != False:
 		chat_id = conn
 		chat_name = dispatcher.bot.getChat(conn).tie
 		filter_list = "*Filter in {}:*\n"
@@ -90,9 +90,9 @@ def filters(update, context):
 	user = update.effective_user  # type: Optional[User]
 	msg = update.effective_message  # type: Optional[Message]
 	args = msg.text.split(None, 1)  # use python's maxsplit to separate Cmd, keyword, and reply_text
-        
+
 	conn = connected(context.bot, update, chat, user.id)
-	if not conn == False:
+	if conn != False:
 		chat_id = conn
 		chat_name = dispatcher.bot.getChat(conn).title
 	else:
@@ -118,7 +118,7 @@ def filters(update, context):
 			return
 		# set trigger -> lower, so as to avoid adding duplicate filters with different cases
 		keyword = extracted[0].lower()
-	
+
 
 	# Add the filter
 	# Note: perhaps handlers can be removed somehow using sql.get_chat_filters
@@ -224,7 +224,7 @@ def reply_filter(update, context):
 
 	chat_filters = sql.get_chat_triggers(chat.id)
 	for keyword in chat_filters:
-		pattern = r"( |^|[^\w])" + re.escape(keyword) + r"( |$|[^\w])"
+		pattern = f"( |^|[^\\w]){re.escape(keyword)}( |$|[^\\w])"
 		if re.search(pattern, to_match, flags=re.IGNORECASE):
 			filt = sql.get_filter(chat.id, keyword)
 			if filt.reply == "there is should be a new reply":
@@ -233,17 +233,23 @@ def reply_filter(update, context):
 				keyboard = InlineKeyboardMarkup(keyb)
 
 				VALID_WELCOME_FORMATTERS = ['first', 'last', 'fullname', 'username', 'id', 'chatname', 'mention']
-				if filt.reply_text:
-					valid_format = escape_invalid_curly_brackets(filt.reply_text, VALID_WELCOME_FORMATTERS)
-					if valid_format:
-						filtext = valid_format.format(first=escape_markdown(message.from_user.first_name),
-													  last=escape_markdown(message.from_user.last_name or message.from_user.first_name),
-													  fullname=escape_markdown(" ".join([message.from_user.first_name, message.from_user.last_name] if message.from_user.last_name else [message.from_user.first_name])), username="@" + message.from_user.username if message.from_user.username else mention_markdown(message.from_user.id, message.from_user.first_name), mention=mention_markdown(message.from_user.id, message.from_user.first_name), chatname=escape_markdown(message.chat.title if message.chat.type != "private" else message.from_user.first_name), id=message.from_user.id)
-					else:
-						filtext = ""
-				else:
-					filtext = ""
-
+				filtext = (valid_format.format(
+				    first=escape_markdown(message.from_user.first_name),
+				    last=escape_markdown(message.from_user.last_name
+				                         or message.from_user.first_name),
+				    fullname=escape_markdown(" ".join(
+				        [message.from_user.first_name, message.from_user.last_name] if
+				        message.from_user.last_name else [message.from_user.first_name])),
+				    username="@" + message.from_user.username
+				    if message.from_user.username else mention_markdown(
+				        message.from_user.id, message.from_user.first_name),
+				    mention=mention_markdown(message.from_user.id,
+				                             message.from_user.first_name),
+				    chatname=escape_markdown(message.chat.title if message.chat.type !=
+				                             "private" else message.from_user.first_name),
+				    id=message.from_user.id,
+				) if filt.reply_text and (valid_format := escape_invalid_curly_brackets(
+				    filt.reply_text, VALID_WELCOME_FORMATTERS)) else "")
 				if filt.file_type in (sql.Types.BUTTON_TEXT, sql.Types.TEXT):
 					try:
 						context.bot.send_message(chat.id, filtext, reply_to_message_id=message.message_id,
@@ -255,74 +261,66 @@ def reply_filter(update, context):
 							try:
 								context.bot.send_message(chat.id, filtext, parse_mode="markdown", disable_web_page_preview=True, reply_markup=keyboard)
 							except BadRequest as excp:
-								LOGGER.exception("Gagal mengirim pesan: " + excp.message)
+								LOGGER.exception(f"Gagal mengirim pesan: {excp.message}")
 								send_message(update.effective_message, tld(update.effective_message, get_exception(excp, filt, chat)))
-								pass
 						else:
 							try:
 								send_message(update.effective_message, tld(update.effective_message, get_exception(excp, filt, chat)))
 							except BadRequest as excp:
-								LOGGER.exception("Gagal mengirim pesan: " + excp.message)
-								pass
+								LOGGER.exception(f"Gagal mengirim pesan: {excp.message}")
 				else:
 					ENUM_FUNC_MAP[filt.file_type](chat.id, filt.file_id, caption=filtext, reply_to_message_id=message.message_id, parse_mode="markdown", disable_web_page_preview=True, reply_markup=keyboard)
-				break
+			elif filt.is_sticker:
+				message.reply_sticker(filt.reply)
+			elif filt.is_document:
+				message.reply_document(filt.reply)
+			elif filt.is_image:
+				message.reply_photo(filt.reply)
+			elif filt.is_audio:
+				message.reply_audio(filt.reply)
+			elif filt.is_voice:
+				message.reply_voice(filt.reply)
+			elif filt.is_video:
+				message.reply_video(filt.reply)
+			elif filt.has_markdown:
+				buttons = sql.get_buttons(chat.id, filt.keyword)
+				keyb = build_keyboard_parser(context.bot, chat.id, buttons)
+				keyboard = InlineKeyboardMarkup(keyb)
+
+				try:
+					send_message(update.effective_message, filt.reply, parse_mode=ParseMode.MARKDOWN,
+
+									   reply_markup=keyboard)
+				except BadRequest as excp:
+					if excp.message == "Unsupported url protocol":
+						try:
+							send_message(update.effective_message, tld(update.effective_message, "You seem to be trying to use an url protocol that is not supported. Telegram "
+											   "does not support keys for some protocols, like tg://. Please try "
+											   "again."))
+						except BadRequest as excp:
+							LOGGER.exception(f"Failed to send message: {excp.message}")
+					elif excp.message == "Reply message not found":
+						try:
+							context.bot.send_message(chat.id, filt.reply, parse_mode=ParseMode.MARKDOWN,
+											 disable_web_page_preview=True,
+											 reply_markup=keyboard)
+						except BadRequest as excp:
+							LOGGER.exception(f"Failed to send message: {excp.message}")
+					else:
+						try:
+							send_message(update.effective_message, tld(update.effective_message, "This note cannot be sent because it is in the wrong format. "))
+						except BadRequest as excp:
+							LOGGER.exception(f"Failed to send message: {excp.message}")
+						LOGGER.warning("Message %s could not be parsed", str(filt.reply))
+						LOGGER.exception("Could not parse filter %s in chat %s", str(filt.keyword), str(chat.id))
+
 			else:
-				if filt.is_sticker:
-					message.reply_sticker(filt.reply)
-				elif filt.is_document:
-					message.reply_document(filt.reply)
-				elif filt.is_image:
-					message.reply_photo(filt.reply)
-				elif filt.is_audio:
-					message.reply_audio(filt.reply)
-				elif filt.is_voice:
-					message.reply_voice(filt.reply)
-				elif filt.is_video:
-					message.reply_video(filt.reply)
-				elif filt.has_markdown:
-					buttons = sql.get_buttons(chat.id, filt.keyword)
-					keyb = build_keyboard_parser(context.bot, chat.id, buttons)
-					keyboard = InlineKeyboardMarkup(keyb)
-
-					try:
-						send_message(update.effective_message, filt.reply, parse_mode=ParseMode.MARKDOWN,
-										   
-										   reply_markup=keyboard)
-					except BadRequest as excp:
-						if excp.message == "Unsupported url protocol":
-							try:
-								send_message(update.effective_message, tld(update.effective_message, "You seem to be trying to use an url protocol that is not supported. Telegram "
-												   "does not support keys for some protocols, like tg://. Please try "
-												   "again."))
-							except BadRequest as excp:
-								LOGGER.exception("Failed to send message: " + excp.message)
-								pass
-						elif excp.message == "Reply message not found":
-							try:
-								context.bot.send_message(chat.id, filt.reply, parse_mode=ParseMode.MARKDOWN,
-												 disable_web_page_preview=True,
-												 reply_markup=keyboard)
-							except BadRequest as excp:
-								LOGGER.exception("Failed to send message: " + excp.message)
-								pass
-						else:
-							try:
-								send_message(update.effective_message, tld(update.effective_message, "This note cannot be sent because it is in the wrong format. "))
-							except BadRequest as excp:
-								LOGGER.exception("Failed to send message: " + excp.message)
-								pass
-							LOGGER.warning("Message %s could not be parsed", str(filt.reply))
-							LOGGER.exception("Could not parse filter %s in chat %s", str(filt.keyword), str(chat.id))
-
-				else:
 					# LEGACY - all new filters will have has_markdown set to True.
-					try:
-						send_message(update.effective_message, filt.reply)
-					except BadRequest as excp:
-						LOGGER.exception("Failed to send message: " + excp.message)
-						pass
-				break
+				try:
+					send_message(update.effective_message, filt.reply)
+				except BadRequest as excp:
+					LOGGER.exception(f"Failed to send message: {excp.message}")
+			break
 
 
 

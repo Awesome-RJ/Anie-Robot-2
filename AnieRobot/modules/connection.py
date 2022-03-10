@@ -28,18 +28,15 @@ def allow_connections(update, context) -> str:
     chat = update.effective_chat  # type: Optional[Chat]
     bot = context.bot
     args = context.args
-    if chat.type != chat.PRIVATE:
-        if len(args) >= 1:
-            var = args[0]
-            print(var)
-            if var == "no":
-                sql.set_allow_connect_to_chat(chat.id, False)
-                update.effective_message.reply_text(tld(chat.id, "Disabled connections to this chat for users"))
-            elif var == "yes":
-                sql.set_allow_connect_to_chat(chat.id, True)
-                update.effective_message.reply_text(tld(chat.id, "Enabled connections to this chat for users"))
-            else:
-                update.effective_message.reply_text(tld(chat.id, "Please enter on/yes/off/no in group!"))
+    if chat.type != chat.PRIVATE and len(args) >= 1:
+        var = args[0]
+        print(var)
+        if var == "no":
+            sql.set_allow_connect_to_chat(chat.id, False)
+            update.effective_message.reply_text(tld(chat.id, "Disabled connections to this chat for users"))
+        elif var == "yes":
+            sql.set_allow_connect_to_chat(chat.id, True)
+            update.effective_message.reply_text(tld(chat.id, "Enabled connections to this chat for users"))
         else:
             update.effective_message.reply_text(tld(chat.id, "Please enter on/yes/off/no in group!"))
     else:
@@ -68,9 +65,7 @@ def connect_chat(update, context):
                     chat_name = dispatcher.bot.getChat(connected(bot, update, chat, user.id, need_admin=False)).title
                     update.effective_message.reply_text(tld(chat.id, "Successfully connected to *{}*").format(chat_name), parse_mode=ParseMode.MARKDOWN)
 
-                    #Add chat to connection history
-                    history = sql.get_history(user.id)
-                    if history:
+                    if history := sql.get_history(user.id):
                         #Vars
                         if history.chat_id1:
                             history1 = int(history.chat_id1)
@@ -92,7 +87,7 @@ def connect_chat(update, context):
                             number = 1
                         else:
                             print("Error")
-                    
+
                         print(history.updated)
                         print(number)
 
@@ -102,7 +97,7 @@ def connect_chat(update, context):
                         sql.add_history(user.id, connect_chat, "0", "0", 2)
                     #Rebuild user's keyboard
                     keyboard(bot, update)
-                    
+
                 else:
                     update.effective_message.reply_text(tld(chat.id, "Connection failed!"))
             else:
@@ -132,7 +127,7 @@ def connect_chat(update, context):
 @user_admin
 def disconnect_chat(update, context):
     bot = context.bot
-    if update.effective_chat.type == 'private':
+    if update.effective_chat.type in ['private', 'supergroup']:
         disconnection_status = sql.disconnect(update.effective_message.from_user.id)
         if disconnection_status:
             sql.disconnected_chat = update.effective_message.reply_text("Disconnected from chat!")
@@ -140,39 +135,27 @@ def disconnect_chat(update, context):
             keyboard(bot, update)
         else:
            update.effective_message.reply_text("Disconnection unsuccessfull!")
-    elif update.effective_chat.type == 'supergroup':
-        disconnection_status = sql.disconnect(update.effective_message.from_user.id)
-        if disconnection_status:
-            sql.disconnected_chat = update.effective_message.reply_text("Disconnected from chat!")
-            # Rebuild user's keyboard
-            keyboard(bot, update)
-        else:
-            update.effective_message.reply_text("Disconnection unsuccessfull!")
     else:
         update.effective_message.reply_text("Usage is restricted to PMs only")
 
 
 def connected(bot, update, chat, user_id, need_admin=True):
-    if chat.type == chat.PRIVATE and sql.get_connected_chat(user_id):
-        conn_id = sql.get_connected_chat(user_id).chat_id
-        if (bot.get_chat_member(conn_id, user_id).status in ('administrator', 'creator') or 
+    if chat.type != chat.PRIVATE or not sql.get_connected_chat(user_id):
+        return False
+    conn_id = sql.get_connected_chat(user_id).chat_id
+    if (bot.get_chat_member(conn_id, user_id).status in ('administrator', 'creator') or 
                                      (sql.allow_connect_to_chat(connect_chat) == True) and 
                                      bot.get_chat_member(user_id, update.effective_message.from_user.id).status in ('member')) or (
                                      user_id in SUDO_USERS):
-            if need_admin:
-                if bot.get_chat_member(conn_id, update.effective_message.from_user.id).status in ('administrator', 'creator') or user_id in SUDO_USERS:
-                    return conn_id
-                else:
-                    update.effective_message.reply_text("You need to be a admin in a connected group!")
-                    exit(1)
-            else:
-                return conn_id
-        else:
-            update.effective_message.reply_text("Group changed rights connection or you are not admin anymore.\nI'll disconnect you.")
-            disconnect_chat(bot, update)
-            exit(1)
+        if not need_admin:
+            return conn_id
+        if bot.get_chat_member(conn_id, update.effective_message.from_user.id).status in ('administrator', 'creator') or user_id in SUDO_USERS:
+            return conn_id
+        update.effective_message.reply_text("You need to be a admin in a connected group!")
     else:
-        return False
+        update.effective_message.reply_text("Group changed rights connection or you are not admin anymore.\nI'll disconnect you.")
+        disconnect_chat(bot, update)
+    exit(1)
 
 
 __help__ = """

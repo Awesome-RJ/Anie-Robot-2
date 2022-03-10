@@ -75,8 +75,6 @@ tg.CommandHandler = CustomCommandHandler
 # NOT ASYNC
 def restr_members(context, chat_id, members, messages=False, media=False, other=False, previews=False):
     for mem in members:
-        if mem.user in SUDO_USERS:
-            pass
         try:
             context.bot.restrict_chat_member(chat_id, mem.user,
                                      can_send_messages=messages,
@@ -211,7 +209,7 @@ def del_lockables(update, context):
     chat = update.effective_chat  # type: Optional[Chat]
     message = update.effective_message  # type: Optional[Message]
     bot = context.bot
-    
+
     if is_approved(chat.id, user.id):
         sql.update_flood(chat.id, None)
         return ""
@@ -232,9 +230,7 @@ def del_lockables(update, context):
                 try:
                     message.delete()
                 except BadRequest as excp:
-                    if excp.message == "Message to delete not found":
-                        pass
-                    else:
+                    if excp.message != "Message to delete not found":
                         LOGGER.exception("ERROR in lockables")
 
             break
@@ -249,9 +245,7 @@ def rest_handler(update, context):
             try:
                 msg.delete()
             except BadRequest as excp:
-                if excp.message == "Message to delete not found":
-                    pass
-                else:
+                if excp.message != "Message to delete not found":
                     LOGGER.exception("ERROR in restrictions")
             break
 

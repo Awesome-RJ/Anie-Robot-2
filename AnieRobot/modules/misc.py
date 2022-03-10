@@ -88,21 +88,19 @@ def slap(update, context):
 
     # get user who sent message
     if msg.from_user.username:
-        curr_user = "@" + escape_markdown(msg.from_user.username)
+        curr_user = f"@{escape_markdown(msg.from_user.username)}"
     else:
         curr_user = "[{}](tg://user?id={})".format(msg.from_user.first_name, msg.from_user.id)
 
-    user_id = extract_user(update.effective_message, args)
-    if user_id:
+    if user_id := extract_user(update.effective_message, args):
         slapped_user = bot.get_chat(user_id)
         user1 = curr_user
         if slapped_user.username:
-            user2 = "@" + escape_markdown(slapped_user.username)
+            user2 = f"@{escape_markdown(slapped_user.username)}"
         else:
             user2 = "[{}](tg://user?id={})".format(slapped_user.first_name,
                                                    slapped_user.id)
 
-    # if no target found, bot targets the sender
     else:
         user1 = "[{}](tg://user?id={})".format(bot.first_name, bot.id)
         user2 = curr_user
@@ -124,10 +122,8 @@ def slap(update, context):
 def get_id(update, context):
     chat = update.effective_chat
     bot = context.bot
-    args = context.args    
-    user_id = extract_user(update.effective_message, args)
-
-    if user_id:
+    args = context.args
+    if user_id := extract_user(update.effective_message, args):
         if update.effective_message.reply_to_message and update.effective_message.reply_to_message.forward_from:
             user1 = update.effective_message.reply_to_message.from_user
             user2 = update.effective_message.reply_to_message.forward_from
@@ -159,10 +155,7 @@ def info(update, context):
     chat = update.effective_chat
     bot = context.bot
     args = context.args
-    user_id = extract_user(update.effective_message, args)
-      # type: Optional[Chat]
-
-    if user_id:
+    if user_id := extract_user(update.effective_message, args):
         user = bot.get_chat(user_id)
 
     elif not msg.reply_to_message and not args:
@@ -191,18 +184,17 @@ def info(update, context):
 
     if user.id == OWNER_ID:
         text += tld(chat.id, "\n\nAy, This guy is my owner. I would never do anything against him!")
+    elif user.id in SUDO_USERS:
+        text += tld(chat.id, "\nThis person is one of my sudo users! " \
+        "Nearly as powerful as my owner - so watch it.")
     else:
-        if user.id in SUDO_USERS:
-            text += tld(chat.id, "\nThis person is one of my sudo users! " \
-            "Nearly as powerful as my owner - so watch it.")
-        else:
-            if user.id in SUPPORT_USERS:
-                text += tld(chat.id, "\nThis person is one of my support users! " \
-                        "Not quite a sudo user, but can still gban you off the map.")
+        if user.id in SUPPORT_USERS:
+            text += tld(chat.id, "\nThis person is one of my support users! " \
+                    "Not quite a sudo user, but can still gban you off the map.")
 
-            if user.id in WHITELIST_USERS:
-                text += tld(chat.id, "\nThis person has been whitelisted! " \
-                        "That means I'm not allowed to ban/kick them.")
+        if user.id in WHITELIST_USERS:
+            text += tld(chat.id, "\nThis person has been whitelisted! " \
+                    "That means I'm not allowed to ban/kick them.")
 
     for mod in USER_INFO:
         try:
@@ -227,12 +219,9 @@ def echo(update, context):
     message.delete()
 
 def reply_keyboard_remove(update, context):
-    reply_keyboard = []
-    reply_keyboard.append([
-        ReplyKeyboardRemove(
+    reply_keyboard = [[ReplyKeyboardRemove(
             remove_keyboard=True
-        )
-    ])
+        )]]
     reply_markup = ReplyKeyboardRemove(
         remove_keyboard=True
     )
@@ -282,12 +271,8 @@ def github(update, context):
 
         for x, y in usr.items():
             if x in whitelist:
-                if x in difnames:
-                    x = difnames[x]
-                else:
-                    x = x.title()
-
-                if x == 'Account created at' or x == 'Last updated':
+                x = difnames[x] if x in difnames else x.title()
+                if x in ['Account created at', 'Last updated']:
                     y = datetime.strptime(y, "%Y-%m-%dT%H:%M:%SZ")
 
                 if y not in goaway:
@@ -322,28 +307,27 @@ def lyrics(update, context):
     args = context.args
     text = message.text[len('/lyrics '):]
     song = " ".join(args).split("- ")
-    reply_text = f'Looks up for lyrics'
-    
-    if len(song) == 2:
-        while song[1].startswith(" "):
-            song[1] = song[1][1:]
-        while song[0].startswith(" "):
-            song[0] = song[0][1:]
-        while song[1].endswith(" "):
-            song[1] = song[1][:-1]
-        while song[0].endswith(" "):
-            song[0] = song[0][:-1]
-        try:
-            lyrics = "\n".join(PyLyrics.getLyrics(
-                song[0], song[1]).split("\n")[:20])
-        except ValueError as e:
-            return update.effective_message.reply_text("Song %s not found :(" % song[1], failed=True)
-        else:
-            lyricstext = LYRICSINFO % (song[0].replace(
-                " ", "_"), song[1].replace(" ", "_"))
-            return update.effective_message.reply_text(lyrics + lyricstext, parse_mode="MARKDOWN")
-    else:
+    reply_text = 'Looks up for lyrics'
+
+    if len(song) != 2:
         return update.effective_message.reply_text("Invalid syntax! Try Artist - Song name .For example, Luis Fonsi - Despacito", failed=True)
+    while song[1].startswith(" "):
+        song[1] = song[1][1:]
+    while song[0].startswith(" "):
+        song[0] = song[0][1:]
+    while song[1].endswith(" "):
+        song[1] = song[1][:-1]
+    while song[0].endswith(" "):
+        song[0] = song[0][:-1]
+    try:
+        lyrics = "\n".join(PyLyrics.getLyrics(
+            song[0], song[1]).split("\n")[:20])
+    except ValueError as e:
+        return update.effective_message.reply_text("Song %s not found :(" % song[1], failed=True)
+    else:
+        lyricstext = LYRICSINFO % (song[0].replace(
+            " ", "_"), song[1].replace(" ", "_"))
+        return update.effective_message.reply_text(lyrics + lyricstext, parse_mode="MARKDOWN")
 
 
 BASE_URL = 'https://del.dog'
@@ -413,7 +397,9 @@ def get_paste_content(update, context):
                 update.effective_message.reply_text('Unknown error occured')
         r.raise_for_status()
 
-    update.effective_message.reply_text('```' + escape_markdown(r.text) + '```', parse_mode=ParseMode.MARKDOWN)
+    update.effective_message.reply_text(
+        f'```{escape_markdown(r.text)}```', parse_mode=ParseMode.MARKDOWN
+    )
 
 
 def get_paste_stats(update, context):
@@ -495,7 +481,7 @@ def execute(update, context):
 def wiki(update, context):
     kueri = re.split(pattern="wiki", string=update.effective_message.text)
     wikipedia.set_lang("en")
-    if len(str(kueri[1])) == 0:
+    if not str(kueri[1]):
         update.effective_message.reply_text("Enter keywords!")
     else:
         try:
@@ -519,18 +505,18 @@ def shrug(update, context):
         
         
 def ud(update, context): 
-        term = ' '.join(args)
-        ud_api = "http://api.urbandictionary.com/v0/define?term=" + term
-        ud_reply = json.loads(requests.get(ud_api).content)['list']
-        if len(args) == 0:
-            update.message.reply_text("USAGE: /ud <Word>")
-        elif len(ud_reply) != 0:
-            ud = ud_reply[0]
-            reply_text = "<b>{0}</b>\n<a href='{1}'>{1}</a>\n<i>By {2}</i>\n\nDefinition: {3}\n\nExample: {4}".format(
-                ud['word'], ud['permalink'], ud['author'], ud['definition'], ud['example'])
-            update.message.reply_text(reply_text, parse_mode='HTML')
-        else:
-            update.message.reply_text("Term not found")
+    term = ' '.join(args)
+    ud_api = f"http://api.urbandictionary.com/v0/define?term={term}"
+    ud_reply = json.loads(requests.get(ud_api).content)['list']
+    if len(args) == 0:
+        update.message.reply_text("USAGE: /ud <Word>")
+    elif len(ud_reply) != 0:
+        ud = ud_reply[0]
+        reply_text = "<b>{0}</b>\n<a href='{1}'>{1}</a>\n<i>By {2}</i>\n\nDefinition: {3}\n\nExample: {4}".format(
+            ud['word'], ud['permalink'], ud['author'], ud['definition'], ud['example'])
+        update.message.reply_text(reply_text, parse_mode='HTML')
+    else:
+        update.message.reply_text("Term not found")
 
 
        

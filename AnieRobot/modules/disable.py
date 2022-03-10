@@ -48,39 +48,36 @@ if is_module_loaded(FILENAME):
             sql.disableable_cache(command)
 
         def check_update(self, update):
-            if isinstance(update, Update) and update.effective_message:
-                message = update.effective_message
+            if not isinstance(update, Update) or not update.effective_message:
+                return
+            message = update.effective_message
 
-                if (message.entities and message.entities[0].type == MessageEntity.BOT_COMMAND
+            if (message.entities and message.entities[0].type == MessageEntity.BOT_COMMAND
                         and message.entities[0].offset == 0):
-                    command = message.text[1:message.entities[0].length]
-                    args = message.text.split()[1:]
-                    command = command.split('@')
-                    command.append(message.bot.username)
+                command = message.text[1:message.entities[0].length]
+                args = message.text.split()[1:]
+                command = command.split('@')
+                command.append(message.bot.username)
 
-                    if not (command[0].lower() in self.command
-                            and command[1].lower() == message.bot.username.lower()):
-                        return None
+                if (
+                    command[0].lower() not in self.command
+                    or command[1].lower() != message.bot.username.lower()
+                ):
+                    return None
 
-                    filter_result = self.filters(update)
-                    if filter_result:
-                        chat = update.effective_chat
-                        user = update.effective_chat
+                if not (filter_result := self.filters(update)):
+                    return False
+                chat = update.effective_chat
+                user = update.effective_chat
                         # disabled, admincmd, user admin
-                        if sql.is_command_disabled(chat.id, command[0].lower()):
-                            # check if command was disabled
-                            is_disabled = command[0] in ADMIN_CMDS and is_user_admin(chat, user.id)
-                            if not is_disabled and sql.is_disable_del(chat.id):
-                                # disabled and should delete
-                                update.effective_message.delete()
-                            if not is_disabled:
-                                return None
-                            else:
-                                return args, filter_result
-
-                        return args, filter_result
-                    else:
-                        return False
+                if sql.is_command_disabled(chat.id, command[0].lower()):
+                    # check if command was disabled
+                    is_disabled = command[0] in ADMIN_CMDS and is_user_admin(chat, user.id)
+                    if not is_disabled and sql.is_disable_del(chat.id):
+                        # disabled and should delete
+                        update.effective_message.delete()
+                    return (args, filter_result) if is_disabled else None
+                return args, filter_result
 
 
 
@@ -103,15 +100,14 @@ if is_module_loaded(FILENAME):
         user = update.effective_user  # type: Optional[User]
         bot = context.bot
         args = context.args
-    
+
         conn = connected(bot, update, chat, user.id)
-        if not conn == False:
+        if conn != False:
             chatD = dispatcher.bot.getChat(conn)
+        elif chat.type == "private":
+            exit(1)
         else:
-            if chat.type == "private":
-                exit(1)
-            else:
-                chatD = update.effective_chat
+            chatD = update.effective_chat
 
         if len(args) >= 1:
             disable_cmd = args[0]
@@ -134,15 +130,14 @@ if is_module_loaded(FILENAME):
         user = update.effective_user  # type: Optional[User]
         bot = context.bot
         args = context.args
-    
+
         conn = connected(bot, update, chat, user.id)
-        if not conn == False:
+        if conn != False:
             chatD = dispatcher.bot.getChat(conn)
+        elif chat.type == "private":
+            exit(1)
         else:
-            if chat.type == "private":
-                exit(1)
-            else:
-                chatD = update.effective_chat
+            chatD = update.effective_chat
 
         if len(args) >= 1:
             enable_cmd = args[0]
@@ -163,9 +158,11 @@ if is_module_loaded(FILENAME):
         chat = update.effective_chat  # type: Optional[Chat]
         bot = context.bot
         if DISABLE_CMDS + DISABLE_OTHER:
-            result = ""
-            for cmd in set(DISABLE_CMDS + DISABLE_OTHER):
-                result += " • `{}`\n".format(escape_markdown(cmd))
+            result = "".join(
+                " • `{}`\n".format(escape_markdown(cmd))
+                for cmd in set(DISABLE_CMDS + DISABLE_OTHER)
+            )
+
             update.effective_message.reply_text(tld(chat.id, "The following commands are toggleable:\n{}").format(result),
                                                 parse_mode=ParseMode.MARKDOWN)
         else:
@@ -177,14 +174,8 @@ if is_module_loaded(FILENAME):
 
         disabled = sql.get_all_disabled(chatD_id)
 
-        result = ""
-        for cmd in disabled:
-            result += " • `{}`\n".format(escape_markdown(cmd))
-
-        if result == "":
-            return tld(chat_id, "No commands are disabled!")
-        else:
-            return result
+        result = "".join(" • `{}`\n".format(escape_markdown(cmd)) for cmd in disabled)
+        return tld(chat_id, "No commands are disabled!") if result == "" else result
 
 
     
@@ -192,15 +183,14 @@ if is_module_loaded(FILENAME):
         chat = update.effective_chat
         user = update.effective_user  # type: Optional[User]
         bot = context.bot
-    
+
         conn = connected(bot, update, chat, user.id, need_admin=False)
-        if not conn == False:
+        if conn != False:
             chatD = dispatcher.bot.getChat(conn)
+        elif chat.type == "private":
+            exit(1)
         else:
-            if chat.type == "private":
-                exit(1)
-            else:
-                chatD = update.effective_chat
+            chatD = update.effective_chat
 
         disabled = sql.get_all_disabled(chatD.id)
         if not disabled:

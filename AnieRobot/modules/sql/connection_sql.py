@@ -53,8 +53,7 @@ HISTORY_LOCK = threading.RLock()
 
 def add_history(user_id, chat_id1, chat_id2, chat_id3, updated):
     with HISTORY_LOCK:
-        prev = SESSION.query(ConnectionHistory).get((int(user_id)))
-        if prev:
+        if prev := SESSION.query(ConnectionHistory).get((int(user_id))):
             SESSION.delete(prev)
         history = ConnectionHistory(user_id, chat_id1, chat_id2, chat_id3, updated)
         SESSION.add(history)
@@ -69,8 +68,9 @@ def get_history(user_id):
 
 def allow_connect_to_chat(chat_id: Union[str, int]) -> bool:
     try:
-        chat_setting = SESSION.query(ChatAccessConnectionSettings).get(str(chat_id))
-        if chat_setting:
+        if chat_setting := SESSION.query(ChatAccessConnectionSettings).get(
+            str(chat_id)
+        ):
             return chat_setting.allow_connect_to_chat
         return False
     finally:
@@ -90,8 +90,7 @@ def set_allow_connect_to_chat(chat_id: Union[int, str], setting: bool):
 
 def connect(user_id, chat_id):
     with CONNECTION_INSERTION_LOCK:
-        prev = SESSION.query(Connection).get((int(user_id)))
-        if prev:
+        if prev := SESSION.query(Connection).get((int(user_id))):
             SESSION.delete(prev)
         connect_to_chat = Connection(int(user_id), chat_id)
         SESSION.add(connect_to_chat)
@@ -116,8 +115,7 @@ def curr_connection(chat_id):
 
 def disconnect(user_id):
     with CONNECTION_INSERTION_LOCK:
-        disconnect = SESSION.query(Connection).get((int(user_id)))
-        if disconnect:
+        if disconnect := SESSION.query(Connection).get((int(user_id))):
             SESSION.delete(disconnect)
             SESSION.commit()
             return True

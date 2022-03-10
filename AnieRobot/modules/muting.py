@@ -51,13 +51,12 @@ def mute(update, context) -> str:
     args = context.args
 
     conn = connected(context, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chatD = dispatcher.bot.getChat(conn)
+    elif chat.type == "private":
+        exit(1)
     else:
-        if chat.type == "private":
-            exit(1)
-        else:
-            chatD = chat
+        chatD = chat
 
     user_id = extract_user(message, args)
     if not user_id:
@@ -68,10 +67,7 @@ def mute(update, context) -> str:
         message.reply_text(tld(chat.id, "I'm not muting myself!"))
         return ""
 
-    member = chatD.get_member(int(user_id))
-
-    if member:
-
+    if member := chatD.get_member(int(user_id)):
         if user_id in SUDO_USERS:
             message.reply_text(tld(chat.id, "No! I'm not muting bot sudoers! That would be a pretty dumb idea."))
 
@@ -110,13 +106,12 @@ def unmute(update, context) -> str:
     args = context.args
 
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chatD = dispatcher.bot.getChat(conn)
+    elif chat.type == "private":
+        exit(1)
     else:
-        if chat.type == "private":
-            exit(1)
-        else:
-            chatD = chat
+        chatD = chat
 
 
     user_id = extract_user(message, args)
@@ -126,32 +121,31 @@ def unmute(update, context) -> str:
 
     member = chatD.get_member(int(user_id))
 
-    if member.status != 'kicked' and member.status != 'left':
-        if member.can_send_messages and member.can_send_media_messages \
-                and member.can_send_other_messages and member.can_add_web_page_previews:
-            message.reply_text(tld(chat.id, "This user already has the right to speak in {}.").format(chatD.title))
-        else:
-            context.bot.restrict_chat_member(chatD.id, int(user_id),
-                                        permissions=ChatPermissions(
-                                         can_send_messages=True,
-                                         can_send_media_messages=True,
-                                         can_send_other_messages=True,
-                                         can_add_web_page_previews=True)
-                                        )
-            keyboard = []
-            reply = tld(chat.id, "Yep, {} can start talking again in {}!").format(mention_html(member.user.id, member.user.first_name), chatD.title)
-            message.reply_text(reply, parse_mode=ParseMode.HTML)
-            return "<b>{}:</b>" \
-                   "\n#UNMUTE" \
-                   "\n<b>• Admin:</b> {}" \
-                   "\n<b>• User:</b> {}" \
-                   "\n<b>• ID:</b> <code>{}</code>".format(html.escape(chatD.title),
-                                                           mention_html(user.id, user.first_name),
-                                                           mention_html(member.user.id, member.user.first_name), user_id)
-    else:
+    if member.status in ['kicked', 'left']:
         message.reply_text(tld(chat.id, "This user isn't even in the chat, unmuting them won't make them talk more than they "
                            "already do!"))
 
+    elif member.can_send_messages and member.can_send_media_messages \
+                and member.can_send_other_messages and member.can_add_web_page_previews:
+        message.reply_text(tld(chat.id, "This user already has the right to speak in {}.").format(chatD.title))
+    else:
+        context.bot.restrict_chat_member(chatD.id, int(user_id),
+                                    permissions=ChatPermissions(
+                                     can_send_messages=True,
+                                     can_send_media_messages=True,
+                                     can_send_other_messages=True,
+                                     can_add_web_page_previews=True)
+                                    )
+        keyboard = []
+        reply = tld(chat.id, "Yep, {} can start talking again in {}!").format(mention_html(member.user.id, member.user.first_name), chatD.title)
+        message.reply_text(reply, parse_mode=ParseMode.HTML)
+        return "<b>{}:</b>" \
+               "\n#UNMUTE" \
+               "\n<b>• Admin:</b> {}" \
+               "\n<b>• User:</b> {}" \
+               "\n<b>• ID:</b> <code>{}</code>".format(html.escape(chatD.title),
+                                                       mention_html(user.id, user.first_name),
+                                                       mention_html(member.user.id, member.user.first_name), user_id)
     return ""
 
 
@@ -168,13 +162,12 @@ def temp_mute(update, context) -> str:
     args = context.args
 
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chatD = dispatcher.bot.getChat(conn)
+    elif chat.type == "private":
+        exit(1)
     else:
-        if chat.type == "private":
-            exit(1)
-        else:
-            chatD = chat
+        chatD = chat
 
     user_id, reason = extract_user_and_text(message, args)
 
@@ -185,12 +178,11 @@ def temp_mute(update, context) -> str:
     try:
         member = chat.get_member(user_id)
     except BadRequest as excp:
-        if excp.message == "User not found":
-            message.reply_text(tld(chat.id, "I can't seem to find this user"))
-            return ""
-        else:
+        if excp.message != "User not found":
             raise
 
+        message.reply_text(tld(chat.id, "I can't seem to find this user"))
+        return ""
     if is_user_admin(chat, user_id, member):
         message.reply_text(tld(chat.id, "I really wish I could mute admins..."))
         return ""
@@ -206,11 +198,7 @@ def temp_mute(update, context) -> str:
     split_reason = reason.split(None, 1)
 
     time_val = split_reason[0].lower()
-    if len(split_reason) > 1:
-        reason = split_reason[1]
-    else:
-        reason = ""
-
+    reason = split_reason[1] if len(split_reason) > 1 else ""
     mutetime = extract_time(message, time_val)
 
     if not mutetime:
@@ -259,13 +247,12 @@ def nomedia(update, context) -> str:
     args = context.args
 
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chatD = dispatcher.bot.getChat(conn)
+    elif chat.type == "private":
+        exit(1)
     else:
-        if chat.type == "private":
-            exit(1)
-        else:
-            chatD = chat
+        chatD = chat
 
     user_id = extract_user(message, args)
     if not user_id:
@@ -276,9 +263,7 @@ def nomedia(update, context) -> str:
         message.reply_text(tld(chat.id, "I'm not restricting myself!"))
         return ""
 
-    member = chatD.get_member(int(user_id))
-
-    if member:
+    if member := chatD.get_member(int(user_id)):
         if is_user_admin(chatD, user_id, member=member):
             message.reply_text(tld(chat.id, "Afraid I can't restrict admins!"))
 
@@ -315,13 +300,12 @@ def media(update, context) -> str:
     args = context.args
 
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chatD = dispatcher.bot.getChat(conn)
+    elif chat.type == "private":
+        exit(1)
     else:
-        if chat.type == "private":
-            exit(1)
-        else:
-            chatD = chat
+        chatD = chat
 
     user_id = extract_user(message, args)
     if not user_id:
@@ -330,26 +314,25 @@ def media(update, context) -> str:
 
     member = chatD.get_member(int(user_id))
 
-    if member.status != 'kicked' and member.status != 'left':
-        if member.can_send_messages and member.can_send_media_messages \
-                and member.can_send_other_messages and member.can_add_web_page_previews:
-            message.reply_text(tld(chat.id, "This user already has the rights to send anything in {}.").format(chatD.title))
-        else:
-            context.bot.restrict_chat_member(chatD.id, int(user_id), NOMEDIA_PERMISSIONS)
-            keyboard = []
-            reply = tld(chat.id, "Yep, {} can send media again in {}!").format(mention_html(member.user.id, member.user.first_name), chatD.title)
-            message.reply_text(reply,  parse_mode=ParseMode.HTML)
-            return "<b>{}:</b>" \
-                   "\n#UNRESTRICTED" \
-                   "\n<b>• Admin:</b> {}" \
-                   "\n<b>• User:</b> {}" \
-                   "\n<b>• ID:</b> <code>{}</code>".format(html.escape(chatD.title),
-                                                           mention_html(user.id, user.first_name),
-                                                           mention_html(member.user.id, member.user.first_name), user_id)
-    else:
+    if member.status in ['kicked', 'left']:
         message.reply_text(tld(chat.id, "This user isn't even in the chat, unrestricting them won't make them send anything than they "
                            "already do!"))
 
+    elif member.can_send_messages and member.can_send_media_messages \
+                and member.can_send_other_messages and member.can_add_web_page_previews:
+        message.reply_text(tld(chat.id, "This user already has the rights to send anything in {}.").format(chatD.title))
+    else:
+        context.bot.restrict_chat_member(chatD.id, int(user_id), NOMEDIA_PERMISSIONS)
+        keyboard = []
+        reply = tld(chat.id, "Yep, {} can send media again in {}!").format(mention_html(member.user.id, member.user.first_name), chatD.title)
+        message.reply_text(reply,  parse_mode=ParseMode.HTML)
+        return "<b>{}:</b>" \
+               "\n#UNRESTRICTED" \
+               "\n<b>• Admin:</b> {}" \
+               "\n<b>• User:</b> {}" \
+               "\n<b>• ID:</b> <code>{}</code>".format(html.escape(chatD.title),
+                                                       mention_html(user.id, user.first_name),
+                                                       mention_html(member.user.id, member.user.first_name), user_id)
     return ""
 
 
